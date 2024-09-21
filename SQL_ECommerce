@@ -1,0 +1,74 @@
+#Membuat tabel temporary dengan mengambil data yang dibutuhkan
+--dari tabel users & order
+WITH tabel_1 AS(
+SELECT
+  u.id as customer_id,
+  CONCAT(u.first_name, ' ', u.last_name) as customer_name,
+  u.age,
+  u.gender,
+  u.country,
+  u.traffic_source,
+  o.order_id,
+  o.status,
+  o.created_at as ordered_date,
+  o.num_of_item,
+  p.category as product_category,
+  p.brand as product_brand,
+  o.num_of_item,
+  oi.sale_price,
+  o.num_of_item * oi.sale_price as pendapatan
+FROM bigquery-public-data.thelook_ecommerce.users u
+LEFT JOIN bigquery-public-data.thelook_ecommerce.orders o
+ON u.id = o.user_id
+LEFT JOIN bigquery-public-data.thelook_ecommerce.order_items oi
+ON u.id = oi.user_id
+LEFT JOIN bigquery-public-data.thelook_ecommerce.products p
+ON oi.product_id = p.id ) 
+
+SELECT
+  ROUND(SUM(pendapatan)) as total_pendapatan, --Q1 Berapa total pendapatan #TheLook Ecommerce yang diterima? 
+  COUNT(DISTINCT customer_id) as total_customer, --Q2 Berapa jumlah customer yang dimiliki oleh TheLook Ecommerce?
+  COUNT(DISTINCT order_id) as total_order --Q3 Berapa jumlah order yang dimiliki oleh TheLook Ecommerce?
+FROM tabel_1 ;
+
+--Q4 Berapa jumlah lost order opportunity yang dimliki TheLook Ecommerce?
+ SELECT
+   COUNT(DISTINCT order_id) as lost_order
+ FROM tabel_1
+WHERE status in ('Cancelled', 'Returned')
+
+--Q5 Bagaimana tren pendapatan pertahun yang dimiliki TheLook Ecommerce?
+SELECT
+  EXTRACT(YEAR from ordered_date) ordered_year 
+FROM tabel_1 
+GROUP BY 4
+ORDER BY 4 ASC;
+
+--Q6 Bagaimana performance traffic source yang dimiliki oleh TheLook Ecommerce?
+SELECT
+  traffic_source,
+  ROUND(SUM(pendapatan)) as total_pendapatan,
+  COUNT(DISTINCT customer_id) as total_customer,
+  COUNT(DISTINCT order_id) as total_order
+FROM tabel_1
+GROUP BY 1;
+
+--Q7 Apa top 5 product berdasarkan hasil penjualan TheLook Ecommerce?
+SELECT
+  product_category,
+  ROUND(SUM(pendapatan)) as total_pendapatan,
+  COUNT(DISTINCT customer_id) as total_customer,
+  COUNT(DISTINCT order_id) as total_order
+FROM tabel_1
+GROUP BY 1
+ORDER BY 4 DESC
+LIMIT 5;
+
+--Q8 Apa top 5 negara berdasarkan hasil pendapatan TheLook Ecommerce?
+SELECT
+  country,
+  ROUND(SUM(pendapatan)) as total_pendapatan
+FROM tabel_1
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 5
